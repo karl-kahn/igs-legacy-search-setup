@@ -166,6 +166,11 @@ if ($env:PATH -notlike "*$gitBinDir*") {
     Show-OK "Already in PATH."
 }
 
+# Set CLAUDE_CODE_GIT_BASH_PATH so Claude Code finds bash.exe regardless of PATH
+$env:CLAUDE_CODE_GIT_BASH_PATH = $gitBashPath
+[System.Environment]::SetEnvironmentVariable("CLAUDE_CODE_GIT_BASH_PATH", $gitBashPath, "User")
+Show-OK "CLAUDE_CODE_GIT_BASH_PATH = $gitBashPath"
+
 # --- Step 3: Claude Code ---
 Show-Step "Claude Code"
 if (Get-Command claude -ErrorAction SilentlyContinue) {
