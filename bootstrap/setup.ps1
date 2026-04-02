@@ -114,6 +114,12 @@ if (-not $gitBashPath) {
     if ($hasWinget) {
         winget install Git.Git --accept-source-agreements --accept-package-agreements
         Refresh-Path
+    } else {
+        Show-Warn "Could not install Git automatically (winget not available)."
+        Show-Warn "Please install from https://git-scm.com/downloads"
+        Show-Warn "IMPORTANT: During install, keep 'Git Bash' checked."
+        Show-Warn "Then run this script again."
+        exit 1
     }
     foreach ($candidate in $gitBashCandidates) {
         if (Test-Path $candidate) {
@@ -121,9 +127,24 @@ if (-not $gitBashPath) {
             break
         }
     }
+    # Also re-check via git.exe in case winget put it somewhere unexpected
     if (-not $gitBashPath) {
-        Show-Warn "Could not find Git Bash after installation."
-        Show-Warn "Please install Git from https://git-scm.com/downloads and run this script again."
+        $gitCmd = Get-Command git -ErrorAction SilentlyContinue
+        if ($gitCmd) {
+            $gitDir = Split-Path (Split-Path $gitCmd.Source)
+            $candidate = Join-Path $gitDir "bin\bash.exe"
+            if (Test-Path $candidate) {
+                $gitBashPath = $candidate
+            }
+        }
+    }
+    if (-not $gitBashPath) {
+        Show-Warn "Git installed but Git Bash (bash.exe) not found."
+        Show-Warn "This can happen if Git was installed without the Bash component."
+        Show-Warn ""
+        Show-Warn "To fix: uninstall Git, then reinstall from https://git-scm.com/downloads"
+        Show-Warn "During install, make sure 'Git Bash' is checked (it's on by default)."
+        Show-Warn "Then run this script again."
         exit 1
     }
     Show-OK "Installed."
