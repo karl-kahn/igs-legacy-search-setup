@@ -1,6 +1,6 @@
-# IGS Legacy Search - Setup
+# IGS Legacy Search - Quick Setup
 
-One-command setup for searching IGS Engineering's historical project archive using Claude.
+Setup takes about 5 minutes. One command installs everything.
 
 ## Windows
 
@@ -34,6 +34,8 @@ Type `claude` in the terminal, then try:
 - "Summarize project P-1074"
 - "Find projects related to corrosion testing on steel pipelines"
 
-## Troubleshooting
+## If something goes wrong
 
 Re-running the setup command is safe — it skips anything already installed.
+
+If you get stuck, just let us know and we'll walk through it together.
