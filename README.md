@@ -1,13 +1,13 @@
-# IGS Legacy Search - Quick Setup
+# IGS Legacy Search - Setup
 
-Setup takes about 5 minutes. One command installs everything.
+One-command setup for searching IGS Engineering's historical project archive using Claude.
 
 ## Windows
 
 Open **PowerShell** (click Start, type "PowerShell", click it) and paste:
 
 ```powershell
-irm https://raw.githubusercontent.com/karl-kahn/igs-legacy-search-setup/main/bootstrap/setup.ps1 | iex
+$env:CLAUDE_SETUP_CONFIG="https://raw.githubusercontent.com/karl-kahn/igs-legacy-search-setup/main/claude-setup.json"; irm https://raw.githubusercontent.com/karl-kahn/claude-setup/main/setup.ps1 | iex
 ```
 
 ## Mac
@@ -15,15 +15,8 @@ irm https://raw.githubusercontent.com/karl-kahn/igs-legacy-search-setup/main/boo
 Open **Terminal** (search for "Terminal" in Spotlight) and paste:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/karl-kahn/igs-legacy-search-setup/main/bootstrap/setup.sh | bash
+CLAUDE_SETUP_CONFIG="https://raw.githubusercontent.com/karl-kahn/igs-legacy-search-setup/main/claude-setup.json" bash -c "$(curl -fsSL https://raw.githubusercontent.com/karl-kahn/claude-setup/main/setup.sh)"
 ```
-
-## What it does
-
-1. Installs Node.js (if needed)
-2. Installs Claude Code CLI
-3. Configures the IGS search server connection
-4. Logs you in to your Anthropic account
 
 ## After setup
 
@@ -34,8 +27,6 @@ Type `claude` in the terminal, then try:
 - "Summarize project P-1074"
 - "Find projects related to corrosion testing on steel pipelines"
 
-## If something goes wrong
+## Troubleshooting
 
-Re-running the setup command is safe — it skips anything already installed.
-
-If you get stuck, just let us know and we'll walk through it together.
+Re-running the setup command is safe — it skips anything already installed. If something goes wrong, close the terminal, open a new one, and run the command again.
