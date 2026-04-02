@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 $McpUrl = "https://malone.taildf301e.ts.net:8443/mcp"
 $McpToken = "2KL2PzA9eKNSFdmsDY1j0aB5R_aEBMFM8arFCJicgxg"
 $Step = 0
-$TotalSteps = 3
+$TotalSteps = 4
 
 # --- Helpers ---
 function Refresh-Path {
@@ -80,7 +80,72 @@ if ($nodeInstalled) {
     Show-OK "Installed."
 }
 
-# --- Step 2: Claude Code ---
+# --- Step 2: Git Bash (required by Claude Code on Windows) ---
+Show-Step "Git Bash"
+$gitBashPath = $null
+$gitBashCandidates = @(
+    "$env:ProgramFiles\Git\bin\bash.exe",
+    "${env:ProgramFiles(x86)}\Git\bin\bash.exe",
+    "$env:LOCALAPPDATA\Programs\Git\bin\bash.exe"
+)
+foreach ($candidate in $gitBashCandidates) {
+    if (Test-Path $candidate) {
+        $gitBashPath = $candidate
+        break
+    }
+}
+
+if (-not $gitBashPath) {
+    # Git might be installed but Git\bin not in PATH -- check if git.exe is findable
+    $gitCmd = Get-Command git -ErrorAction SilentlyContinue
+    if ($gitCmd) {
+        # git.exe is usually in Git\cmd -- bash.exe is in Git\bin
+        $gitDir = Split-Path (Split-Path $gitCmd.Source)
+        $candidate = Join-Path $gitDir "bin\bash.exe"
+        if (Test-Path $candidate) {
+            $gitBashPath = $candidate
+        }
+    }
+}
+
+if (-not $gitBashPath) {
+    Show-Action "Installing Git (includes Git Bash)..."
+    $hasWinget = Get-Command winget -ErrorAction SilentlyContinue
+    if ($hasWinget) {
+        winget install Git.Git --accept-source-agreements --accept-package-agreements
+        Refresh-Path
+    }
+    foreach ($candidate in $gitBashCandidates) {
+        if (Test-Path $candidate) {
+            $gitBashPath = $candidate
+            break
+        }
+    }
+    if (-not $gitBashPath) {
+        Show-Warn "Could not find Git Bash after installation."
+        Show-Warn "Please install Git from https://git-scm.com/downloads and run this script again."
+        exit 1
+    }
+    Show-OK "Installed."
+} else {
+    Show-OK "Found."
+}
+
+# Ensure Git\bin is in PATH so Claude Code can find bash.exe
+$gitBinDir = Split-Path $gitBashPath
+if ($env:PATH -notlike "*$gitBinDir*") {
+    $env:PATH = "$gitBinDir;$env:PATH"
+    # Persist for future sessions
+    $userPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+    if ($userPath -notlike "*$gitBinDir*") {
+        [System.Environment]::SetEnvironmentVariable("PATH", "$gitBinDir;$userPath", "User")
+    }
+    Show-OK "Added to PATH: $gitBinDir"
+} else {
+    Show-OK "Already in PATH."
+}
+
+# --- Step 3: Claude Code ---
 Show-Step "Claude Code"
 if (Get-Command claude -ErrorAction SilentlyContinue) {
     Show-OK "Ready."
@@ -109,7 +174,7 @@ if (-not $env:HOME) {
     [System.Environment]::SetEnvironmentVariable("HOME", $env:USERPROFILE, "User")
 }
 
-# --- Step 3: MCP server configuration ---
+# --- Step 4: MCP server configuration ---
 Show-Step "Search server configuration"
 $configPath = "$env:USERPROFILE\.claude.json"
 $mcpEntry = @{
