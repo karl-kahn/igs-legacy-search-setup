@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 $McpUrl = "https://malone.taildf301e.ts.net:8443/mcp"
 $McpToken = "2KL2PzA9eKNSFdmsDY1j0aB5R_aEBMFM8arFCJicgxg"
 $Step = 0
-$TotalSteps = 4
+$TotalSteps = 3
 
 # --- Helpers ---
 function Refresh-Path {
@@ -147,17 +147,6 @@ $config.mcpServers | Add-Member -NotePropertyName 'igs-legacy-search' -NotePrope
 $config | ConvertTo-Json -Depth 10 | Set-Content $configPath -Encoding UTF8
 Show-OK "Server configured."
 
-# --- Step 4: Login check ---
-Show-Step "Claude login"
-Show-Action "Launching Claude Code login..."
-Write-Host ""
-Write-Host "         A browser window will open." -ForegroundColor White
-Write-Host "         Sign in with your Anthropic account," -ForegroundColor White
-Write-Host "         then come back here." -ForegroundColor White
-Write-Host ""
-
-claude login 2>$null
-
 # --- Done ---
 Write-Host ""
 Write-Host "  ========================================" -ForegroundColor Green
@@ -167,6 +156,10 @@ Write-Host ""
 Write-Host "  To start searching, type:" -ForegroundColor White
 Write-Host ""
 Write-Host "    claude" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  It will ask you to log in on first launch." -ForegroundColor White
+Write-Host "  Sign in with your Anthropic account in the" -ForegroundColor White
+Write-Host "  browser, then come back to the terminal." -ForegroundColor White
 Write-Host ""
 Write-Host "  Then try:" -ForegroundColor White
 Write-Host '    "Search for projects involving sulfuric acid"' -ForegroundColor White
