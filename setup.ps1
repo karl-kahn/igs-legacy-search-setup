@@ -19,16 +19,7 @@ if (-not $nodePath) {
 $nodeVersion = node --version
 Write-Host "Node.js found: $nodeVersion" -ForegroundColor Green
 
-# Check Python (needed for JSON config writing)
-$pythonPath = Get-Command python -ErrorAction SilentlyContinue
-if (-not $pythonPath) {
-    Write-Host "ERROR: Python is not installed." -ForegroundColor Red
-    Write-Host "Download and install from: https://python.org/"
-    exit 1
-}
-Write-Host "Python found" -ForegroundColor Green
-
-# Configure Claude Desktop using Python (avoids PowerShell JSON depth issues)
+# Configure Claude Desktop
 $configDir = "$env:APPDATA\Claude"
 $configPath = "$configDir\claude_desktop_config.json"
 
@@ -38,55 +29,41 @@ if (-not (Test-Path $configDir)) {
     exit 1
 }
 
-# Write a Python helper script to handle JSON merging
-$pyScript = @"
-import json, os, sys
-
-config_path = sys.argv[1]
-
-# Read existing config or start fresh
-config = {}
-if os.path.exists(config_path):
-    try:
-        with open(config_path, encoding='utf-8-sig') as f:
-            config = json.load(f)
-    except Exception:
-        pass
-
-# Add MCP server
-if 'mcpServers' not in config:
-    config['mcpServers'] = {}
-
-config['mcpServers']['igs-legacy-search'] = {
-    'command': 'npx',
-    'args': [
-        'mcp-remote',
-        'https://malone.taildf301e.ts.net:8443/mcp',
-        '--header',
-        'Authorization: Bearer 2KL2PzA9eKNSFdmsDY1j0aB5R_aEBMFM8arFCJicgxg'
-    ]
+# Read existing config, merge in our server, write back
+# Using node to handle JSON properly (PowerShell mangles nested objects)
+$jsScript = @'
+const fs = require("fs");
+const configPath = process.argv[2];
+let config = {};
+try { config = JSON.parse(fs.readFileSync(configPath, "utf-8")); } catch {}
+if (!config.mcpServers) config.mcpServers = {};
+config.mcpServers["igs-legacy-search"] = {
+  command: "npx",
+  args: [
+    "mcp-remote",
+    "https://malone.taildf301e.ts.net:8443/mcp",
+    "--header",
+    "Authorization: Bearer 2KL2PzA9eKNSFdmsDY1j0aB5R_aEBMFM8arFCJicgxg"
+  ]
+};
+fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
+const written = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+if (written.mcpServers && written.mcpServers["igs-legacy-search"]) {
+  console.log("OK");
+} else {
+  console.log("FAIL");
+  process.exit(1);
 }
+'@
 
-with open(config_path, 'w', encoding='utf-8') as f:
-    json.dump(config, f, indent=2)
-
-# Verify
-with open(config_path, encoding='utf-8') as f:
-    written = json.load(f)
-if 'igs-legacy-search' in written.get('mcpServers', {}):
-    print('OK')
-else:
-    print('FAIL')
-    sys.exit(1)
-"@
-
-$pyScriptPath = "$env:TEMP\igs-setup-config.py"
-$pyScript | Out-File -FilePath $pyScriptPath -Encoding UTF8
+$jsPath = "$env:TEMP\igs-setup-config.js"
+$jsScript | Out-File -FilePath $jsPath -Encoding UTF8
 
 Write-Host "Configuring Claude Desktop..." -ForegroundColor Yellow
-$result = python $pyScriptPath $configPath
+$result = node $jsPath $configPath
 if ($result -ne "OK") {
     Write-Host "ERROR: Config write failed. Please contact Karl." -ForegroundColor Red
+    Remove-Item $jsPath -ErrorAction SilentlyContinue
     exit 1
 }
 Write-Host "Config written successfully" -ForegroundColor Green
@@ -97,7 +74,7 @@ npm install --global mcp-remote 2>$null | Out-Null
 Write-Host "mcp-remote ready" -ForegroundColor Green
 
 # Clean up
-Remove-Item $pyScriptPath -ErrorAction SilentlyContinue
+Remove-Item $jsPath -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "Setup complete!" -ForegroundColor Green
