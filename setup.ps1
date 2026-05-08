@@ -1,6 +1,6 @@
 # IGS Legacy Search - Claude Desktop Setup
-# Configures Claude Desktop to connect to the IGS Legacy Search MCP server.
-# Requires: Node.js (for mcp-remote bridge)
+# Configures Claude Desktop to connect to the IGS Legacy Search MCP server (Azure).
+# Requires: Node.js (for the mcp-remote stdio<->HTTP bridge)
 
 $ErrorActionPreference = "Stop"
 
@@ -29,6 +29,15 @@ if (-not (Test-Path $configDir)) {
     exit 1
 }
 
+# Install mcp-remote globally BEFORE writing the config. Claude Desktop's spawn
+# environment doesn't reliably handle `npx -y mcp-remote` on first launch — the
+# auto-install can fail silently and the bridge child process exits in <100ms.
+# Pre-installing globally and invoking `mcp-remote` directly (no `npx`) avoids
+# the auto-install path entirely.
+Write-Host "Installing mcp-remote bridge..." -ForegroundColor Yellow
+npm install --global mcp-remote 2>$null | Out-Null
+Write-Host "mcp-remote ready" -ForegroundColor Green
+
 # Read existing config, merge in our server, write back
 # Using node to handle JSON properly (PowerShell mangles nested objects)
 $jsScript = @'
@@ -38,12 +47,11 @@ let config = {};
 try { config = JSON.parse(fs.readFileSync(configPath, "utf-8")); } catch {}
 if (!config.mcpServers) config.mcpServers = {};
 config.mcpServers["igs-legacy-search"] = {
-  command: "npx",
+  command: "mcp-remote",
   args: [
-    "mcp-remote",
-    "https://malone.taildf301e.ts.net:8443/mcp",
+    "https://igs-legacy-search-app.calmrock-c14844e2.eastus.azurecontainerapps.io/mcp",
     "--header",
-    "Authorization: Bearer 2KL2PzA9eKNSFdmsDY1j0aB5R_aEBMFM8arFCJicgxg"
+    "Authorization: Bearer J8Mf3bjU62gGgOV7DTKuuEPgPQaKKxqYCwzMYj0X/D4"
   ]
 };
 fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
@@ -68,11 +76,6 @@ if ($result -ne "OK") {
 }
 Write-Host "Config written successfully" -ForegroundColor Green
 
-# Pre-download mcp-remote so first launch is not slow
-Write-Host "Downloading mcp-remote bridge (one-time, may take a moment)..." -ForegroundColor Yellow
-npm install --global mcp-remote 2>$null | Out-Null
-Write-Host "mcp-remote ready" -ForegroundColor Green
-
 # Clean up
 Remove-Item $jsPath -ErrorAction SilentlyContinue
 
@@ -82,13 +85,20 @@ Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Close Claude Desktop completely (right-click system tray icon > Quit)"
 Write-Host "  2. Reopen Claude Desktop"
-Write-Host "  3. Switch to the CODE pane (not Chat)"
-Write-Host "  4. Try asking: Search for sulfuric acid testing"
+Write-Host "  3. Try asking: What's the status of the most recent ingest?"
 Write-Host ""
 Write-Host "Available tools:" -ForegroundColor Cyan
-Write-Host "  - search_projects: Natural language search across all projects"
-Write-Host "  - get_document: Pull up a specific document"
-Write-Host "  - summarize_project: Get final deliverables for a project"
-Write-Host "  - list_projects: Browse everything indexed"
-Write-Host "  - generate_memo: Export to IGS Word template"
+Write-Host "  Search & retrieval:"
+Write-Host "    - search_projects: Natural language search across all projects"
+Write-Host "    - get_document: Pull up a specific document"
+Write-Host "    - get_document_chunks: Page through a long document"
+Write-Host "    - list_project_documents: See every document in a project"
+Write-Host "    - summarize_project: Get final deliverables for a project"
+Write-Host "    - list_projects: Browse everything indexed"
+Write-Host "    - generate_memo: Export to IGS Word template"
+Write-Host "  Operational dashboard:"
+Write-Host "    - get_ingest_status: Most recent ingest run status"
+Write-Host "    - list_ingest_runs: Recent ingest history"
+Write-Host "    - list_ingest_failures: Projects that failed to ingest"
+Write-Host "    - get_search_usage: Tool-call statistics"
 Write-Host ""

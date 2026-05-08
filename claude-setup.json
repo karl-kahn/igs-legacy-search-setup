@@ -3,9 +3,9 @@
   "mcpServers": {
     "igs-legacy-search": {
       "type": "http",
-      "url": "https://malone.taildf301e.ts.net:8443/mcp",
+      "url": "https://igs-legacy-search-app.calmrock-c14844e2.eastus.azurecontainerapps.io/mcp",
       "headers": {
-        "Authorization": "Bearer 2KL2PzA9eKNSFdmsDY1j0aB5R_aEBMFM8arFCJicgxg"
+        "Authorization": "Bearer J8Mf3bjU62gGgOV7DTKuuEPgPQaKKxqYCwzMYj0X/D4"
       }
     }
   }
