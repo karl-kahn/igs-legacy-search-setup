@@ -1,12 +1,33 @@
 # IGS Legacy Search - Claude Desktop Setup
 # Configures Claude Desktop to connect to the IGS Legacy Search MCP server (Azure).
 # Requires: Node.js (for the mcp-remote stdio<->HTTP bridge)
+#
+# Usage:
+#   .\setup.ps1                              # prompts for the bearer token
+#   .\setup.ps1 -BearerToken "<paste-token-here>"   # pass it in directly
+
+param(
+    [string]$BearerToken = ""
+)
 
 $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "=== IGS Legacy Search - Claude Desktop Setup ===" -ForegroundColor Cyan
 Write-Host ""
+
+# Bearer token — emailed to you by Karl. Required to authenticate against the
+# MCP server. Re-running setup.ps1 to update other things? Pass the token
+# again with -BearerToken so you don't have to dig it out of email.
+if ([string]::IsNullOrWhiteSpace($BearerToken)) {
+    Write-Host "Paste the bearer token Karl emailed you, then press Enter:" -ForegroundColor Yellow
+    $BearerToken = Read-Host "  Token"
+    if ([string]::IsNullOrWhiteSpace($BearerToken)) {
+        Write-Host "ERROR: No token entered. Cannot continue." -ForegroundColor Red
+        exit 1
+    }
+}
+$BearerToken = $BearerToken.Trim()
 
 # Check Node.js
 $nodePath = Get-Command node -ErrorAction SilentlyContinue
@@ -38,11 +59,18 @@ Write-Host "Installing mcp-remote bridge..." -ForegroundColor Yellow
 npm install --global mcp-remote 2>$null | Out-Null
 Write-Host "mcp-remote ready" -ForegroundColor Green
 
-# Read existing config, merge in our server, write back
-# Using node to handle JSON properly (PowerShell mangles nested objects)
+# Read existing config, merge in our server, write back. Using node so JSON
+# survives PowerShell's nested-object mangling. Token comes through via env
+# var rather than string-interpolated into the JS source — keeps special
+# chars (/ + =) from needing escape gymnastics.
 $jsScript = @'
 const fs = require("fs");
 const configPath = process.argv[2];
+const bearerToken = process.env.IGS_BEARER_TOKEN;
+if (!bearerToken) {
+  console.log("FAIL: IGS_BEARER_TOKEN env var missing");
+  process.exit(1);
+}
 let config = {};
 try { config = JSON.parse(fs.readFileSync(configPath, "utf-8")); } catch {}
 if (!config.mcpServers) config.mcpServers = {};
@@ -51,7 +79,7 @@ config.mcpServers["igs-legacy-search"] = {
   args: [
     "https://igs-legacy-search-app.calmrock-c14844e2.eastus.azurecontainerapps.io/mcp",
     "--header",
-    "Authorization: Bearer J8Mf3bjU62gGgOV7DTKuuEPgPQaKKxqYCwzMYj0X/D4"
+    "Authorization: Bearer " + bearerToken
   ]
 };
 fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
@@ -68,9 +96,15 @@ $jsPath = "$env:TEMP\igs-setup-config.js"
 $jsScript | Out-File -FilePath $jsPath -Encoding UTF8
 
 Write-Host "Configuring Claude Desktop..." -ForegroundColor Yellow
-$result = node $jsPath $configPath
+$env:IGS_BEARER_TOKEN = $BearerToken
+try {
+    $result = node $jsPath $configPath
+} finally {
+    Remove-Item Env:\IGS_BEARER_TOKEN -ErrorAction SilentlyContinue
+}
 if ($result -ne "OK") {
     Write-Host "ERROR: Config write failed. Please contact Karl." -ForegroundColor Red
+    Write-Host "  Detail: $result" -ForegroundColor Red
     Remove-Item $jsPath -ErrorAction SilentlyContinue
     exit 1
 }

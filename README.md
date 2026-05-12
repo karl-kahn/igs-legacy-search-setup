@@ -2,59 +2,45 @@
 
 One-command setup for searching IGS Engineering's historical project archive using Claude.
 
-This repository is **private**. To use the setup script you need a GitHub account and to be added as a collaborator (ask Karl). The `gh` GitHub CLI handles authentication so that you can download the script from this private repo without juggling personal access tokens.
-
 ## Prerequisites
 
-Install these in order. Default settings are fine for all four.
+Install these in order. Default settings are fine for all three.
 
-- **GitHub account** — sign up at https://github.com/signup, then send Karl your GitHub username. Karl will add you as a collaborator on this repo.
-- **Git for Windows** (includes the `gh` GitHub CLI) — https://git-scm.com/download/win
+- **Git for Windows** — https://git-scm.com/download/win
 - **Node.js (LTS)** — https://nodejs.org/
 - **Claude Desktop** — https://claude.ai/download
 
 After installing, open a fresh **PowerShell** and confirm:
 
 ```powershell
-gh --version    # expect: gh version 2.x.x
-node --version  # expect: v20.x.x or v22.x.x
+git --version    # expect: git version 2.x.x
+node --version   # expect: v20.x.x or v22.x.x
 ```
 
 If either reports "command not found," close the PowerShell window and open a new one — the PATH update doesn't apply to a window that was open during install.
 
-## Authenticate the GitHub CLI
+## Bearer token
 
-The setup script lives in a private repo. PowerShell needs to authenticate as you before it can fetch the script.
-
-```powershell
-gh auth login
-```
-
-Choose: `GitHub.com` -> `HTTPS` -> authenticate Git: `Y` -> `Login with a web browser`. Paste the one-time code into the browser when prompted. When the terminal reports `Logged in as your-username`, you're done.
-
-Confirm:
-
-```powershell
-gh auth status
-```
+Karl will email you a bearer token. Keep that email handy — `setup.ps1` will prompt for it. The token authenticates your Claude Desktop against the IGS Legacy Search MCP server in Azure. Don't share it; if you suspect it's been exposed, ask Karl to rotate it.
 
 ## Run the setup
 
-Once you've been added as a collaborator (Karl will confirm) and `gh auth status` reports you're logged in:
-
 ```powershell
 cd $env:USERPROFILE
-gh repo clone karl-kahn/igs-legacy-search-setup
+git clone https://github.com/karl-kahn/igs-legacy-search-setup.git
 cd igs-legacy-search-setup
 .\setup.ps1
 ```
 
-This will:
+When prompted, paste the bearer token from Karl's email and press Enter.
 
-1. Verify Node.js is installed
-2. Install the `mcp-remote` bridge globally
-3. Configure Claude Desktop to connect to the Legacy Search server
-4. Print the list of available tools
+The script will:
+
+1. Prompt for the bearer token (or accept it via `-BearerToken "..."` if you'd rather pass it on the command line)
+2. Verify Node.js is installed
+3. Install the `mcp-remote` bridge globally
+4. Configure Claude Desktop to connect to the Legacy Search server
+5. Print the list of available tools
 
 ## After setup
 
@@ -67,25 +53,10 @@ This will:
    - "Find images of erosion test coupons" *(filename search, new)*
    - "Write a technical memo about dew point corrosion findings"
 
-## CLI setup (advanced)
-
-If you prefer the terminal interface, after `gh auth login`:
-
-```powershell
-$env:CLAUDE_SETUP_CONFIG="$env:USERPROFILE\igs-legacy-search-setup\claude-setup.json"
-irm https://raw.githubusercontent.com/karl-kahn/claude-setup/main/setup.ps1 | iex
-```
-
-(The `claude-setup` repo is public, so `irm` works directly there. The path above points at the local copy of `claude-setup.json` you got from `gh repo clone`.)
-
-Then type `claude` in the terminal to start.
-
 ## Troubleshooting
 
-- **`irm` returns 404** — the old README suggested fetching `setup.ps1` directly via `irm`. That fails on this private repo. Use `gh repo clone` (as above) instead.
-- **`gh: command not found`** — you have a PowerShell window that was open before Git for Windows finished installing. Close it and open a new one.
+- **`git: command not found`** — you have a PowerShell window that was open before Git for Windows finished installing. Close it and open a new one.
 - **`Claude Desktop config directory not found`** — Claude Desktop hasn't been opened yet. Open it once (sign in), close it, then re-run `.\setup.ps1`.
 - **Setup said success but Claude Desktop shows no tools** — quit Claude Desktop from the system tray (not just close the window) and reopen.
+- **Re-running** `.\setup.ps1` is safe — it'll update the Claude Desktop config in place. Pass `-BearerToken "..."` to skip the prompt.
 - Anything else: email Karl at `karl@gsdat.work`.
-
-Re-running `.\setup.ps1` is safe — it'll update the Claude Desktop config in place.

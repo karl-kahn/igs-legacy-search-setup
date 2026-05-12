@@ -5,7 +5,7 @@
       "type": "http",
       "url": "https://igs-legacy-search-app.calmrock-c14844e2.eastus.azurecontainerapps.io/mcp",
       "headers": {
-        "Authorization": "Bearer J8Mf3bjU62gGgOV7DTKuuEPgPQaKKxqYCwzMYj0X/D4"
+        "Authorization": "Bearer YOUR_BEARER_TOKEN_HERE"
       }
     }
   }
