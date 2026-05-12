@@ -55,8 +55,27 @@ if (-not (Test-Path $configDir)) {
 # auto-install can fail silently and the bridge child process exits in <100ms.
 # Pre-installing globally and invoking `mcp-remote` directly (no `npx`) avoids
 # the auto-install path entirely.
+#
+# npm routinely writes harmless "npm notice" lines to stderr. With the
+# script-level `$ErrorActionPreference = "Stop"`, PowerShell treats those
+# stderr lines as terminating NativeCommandError and halts execution.
+# Suppress by (a) merging stderr into stdout via 2>&1 so PowerShell never
+# sees them as error records, and (b) locally relaxing ErrorAction around
+# the call so the npm exit code is what we actually check, not stderr chatter.
 Write-Host "Installing mcp-remote bridge..." -ForegroundColor Yellow
-npm install --global mcp-remote 2>$null | Out-Null
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+try {
+    & npm install --global mcp-remote 2>&1 | Out-Null
+} finally {
+    $ErrorActionPreference = $prevEAP
+}
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: 'npm install --global mcp-remote' failed (exit $LASTEXITCODE)." -ForegroundColor Red
+    Write-Host "If this is a corporate-Windows permissions issue, try running PowerShell as administrator" -ForegroundColor Red
+    Write-Host "or install mcp-remote without --global by setting npm prefix to a user-writable directory." -ForegroundColor Red
+    exit 1
+}
 Write-Host "mcp-remote ready" -ForegroundColor Green
 
 # Read existing config, merge in our server, write back. Using node so JSON
