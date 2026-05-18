@@ -21,7 +21,7 @@ If either reports "command not found," close the PowerShell window and open a ne
 
 ## Bearer token
 
-Karl will email you a bearer token. Keep that email handy — `setup.ps1` will prompt for it. The token authenticates your Claude Desktop against the IGS Legacy Search MCP server in Azure. Don't share it; if you suspect it's been exposed, ask Karl to rotate it.
+Your team admin will share a bearer token with you. Keep it handy — `setup.ps1` will prompt for it. The token authenticates your Claude Desktop against the Legacy Search MCP server in Azure. Don't share it; if you suspect it's been exposed, ask your team admin to rotate it.
 
 ## Run the setup
 
@@ -32,7 +32,7 @@ cd igs-legacy-search-setup
 .\setup.ps1
 ```
 
-When prompted, paste the bearer token from Karl's email and press Enter.
+When prompted, paste the bearer token and press Enter.
 
 The script will:
 
