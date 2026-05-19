@@ -1,62 +1,84 @@
-# IGS Legacy Search - Setup
+# IGS Legacy Search -- Setup
 
-One-command setup for searching IGS Engineering's historical project archive using Claude.
+One-command setup to connect Claude Desktop to the IGS Legacy Project Search MCP server.
 
 ## Prerequisites
 
-Install these in order. Default settings are fine for all three.
+- **Claude Desktop** -- https://claude.ai/download (open it once, sign in, quit, then run the installer).
+- **Node.js v18 or newer** -- https://nodejs.org/ (LTS build is fine; needed for the `mcp-remote` bridge).
+- A **bearer token** from your team admin (Karl). Paste it when the installer prompts.
 
-- **Git for Windows** — https://git-scm.com/download/win
-- **Node.js (LTS)** — https://nodejs.org/
-- **Claude Desktop** — https://claude.ai/download
+The installer checks Node.js for you; if it's missing it tells you where to grab it and exits cleanly.
 
-After installing, open a fresh **PowerShell** and confirm:
+## Install -- one command
 
-```powershell
-git --version    # expect: git version 2.x.x
-node --version   # expect: v20.x.x or v22.x.x
+### macOS
+
+```bash
+curl -sSL https://raw.githubusercontent.com/karl-kahn/igs-legacy-search-setup/main/install.sh | bash
 ```
 
-If either reports "command not found," close the PowerShell window and open a new one — the PATH update doesn't apply to a window that was open during install.
+You'll be prompted for the bearer token (input is masked). To skip the prompt:
 
-## Bearer token
-
-Your team admin will share a bearer token with you. Keep it handy — `setup.ps1` will prompt for it. The token authenticates your Claude Desktop against the Legacy Search MCP server in Azure. Don't share it; if you suspect it's been exposed, ask your team admin to rotate it.
-
-## Run the setup
-
-```powershell
-cd $env:USERPROFILE
-git clone https://github.com/karl-kahn/igs-legacy-search-setup.git
-cd igs-legacy-search-setup
-.\setup.ps1
+```bash
+curl -sSL https://raw.githubusercontent.com/karl-kahn/igs-legacy-search-setup/main/install.sh | bash -s -- -t "<paste-token-here>"
 ```
 
-When prompted, paste the bearer token and press Enter.
+### Windows (PowerShell 5.1+)
 
-The script will:
+```powershell
+iex (irm https://raw.githubusercontent.com/karl-kahn/igs-legacy-search-setup/main/install.ps1)
+```
 
-1. Prompt for the bearer token (or accept it via `-BearerToken "..."` if you'd rather pass it on the command line)
-2. Verify Node.js is installed
-3. Install the `mcp-remote` bridge globally
-4. Configure Claude Desktop to connect to the Legacy Search server
-5. Print the list of available tools
+You'll be prompted for the bearer token (input is masked). To skip the prompt:
 
-## After setup
+```powershell
+$env:IGS_BEARER_TOKEN = "<paste-token-here>"; iex (irm https://raw.githubusercontent.com/karl-kahn/igs-legacy-search-setup/main/install.ps1)
+```
 
-1. Right-click the **Claude Desktop** icon in the system tray and choose **Quit** (a full quit, not just closing the window).
+## What just happened
+
+The installer:
+
+1. Verified Node.js >= 18 is on your PATH.
+2. Ran `npx -y mcp-remote --help` to download/cache the bridge and confirm it works.
+3. Asked the MCP server `initialize` with your bearer token -- a 200 means the token is valid, 401 means it isn't.
+4. Backed up your existing `claude_desktop_config.json` (if any) with a timestamp suffix.
+5. Merged an `igs-legacy-search` entry into `mcpServers`, preserving every other server you already had configured.
+6. Verified the entry survived the write.
+
+Config paths:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+## After install
+
+1. Quit Claude Desktop **completely** -- the config is only re-read on cold launch.
+   - macOS: `Cmd+Q` (closing the window with red-dot isn't enough).
+   - Windows: right-click the system tray icon -> Quit.
 2. Reopen Claude Desktop.
-3. Try:
-   - "Search for projects involving sulfuric acid"
+3. Try a query:
+   - "Search for projects involving sulfuric acid corrosion testing"
    - "List all indexed projects"
    - "Summarize project P-1074"
-   - "Find images of erosion test coupons" *(filename search, new)*
-   - "Write a technical memo about dew point corrosion findings"
+   - "What's the status of the most recent ingest run?"
+
+## Re-running
+
+Safe and idempotent. Re-runs overwrite only the `igs-legacy-search` entry; other `mcpServers` and a backup of the previous config are preserved.
 
 ## Troubleshooting
 
-- **`git: command not found`** — you have a PowerShell window that was open before Git for Windows finished installing. Close it and open a new one.
-- **`Claude Desktop config directory not found`** — Claude Desktop hasn't been opened yet. Open it once (sign in), close it, then re-run `.\setup.ps1`.
-- **Setup said success but Claude Desktop shows no tools** — quit Claude Desktop from the system tray (not just close the window) and reopen.
-- **Re-running** `.\setup.ps1` is safe — it'll update the Claude Desktop config in place. Pass `-BearerToken "..."` to skip the prompt.
+- **`401` during token verify** -- token is wrong, expired, or got truncated on copy-paste. Ask your team admin to re-share.
+- **`Claude Desktop config directory not found`** -- Claude Desktop hasn't been launched yet on this machine. Open it once, sign in, quit, then re-run the installer.
+- **Setup said success but Claude Desktop shows no tools** -- you closed the window instead of quitting. Quit fully (`Cmd+Q` / tray-quit), reopen.
+- **`Node.js is not installed`** but you just installed it -- on Windows the new PATH only applies to PowerShell windows opened *after* the Node installer finishes. Close this window and open a fresh one.
+- **`Could not reach the MCP server`** -- corporate VPN/firewall is blocking `*.azurecontainerapps.io`. Karl + IT.
 - Anything else: email Karl at `karl@gsdat.work`.
+
+## Manual fallback (the long way)
+
+The legacy `setup.ps1` (clone-and-run flow) is still in this repo. The new one-liner is preferred -- the old flow remains as a fallback if your environment blocks `irm` / `iex` against raw.githubusercontent.com.
+
+See `KNOWN_LIMITATIONS.md` for environment caveats we know about.
