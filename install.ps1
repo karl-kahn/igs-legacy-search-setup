@@ -216,9 +216,19 @@ if (typeof config !== "object" || config === null || Array.isArray(config)) {
 if (typeof config.mcpServers !== "object" || config.mcpServers === null || Array.isArray(config.mcpServers)) {
   config.mcpServers = {};
 }
+// On Windows, Claude Desktop resolves "npx" to C:\Program Files\nodejs\npx.cmd
+// and runs it via `cmd /C` WITHOUT quoting, so the space in "Program Files"
+// makes cmd choke ("'C:\Program' is not recognized") and the bridge dies on
+// launch -> "Server disconnected". Spawning cmd explicitly and letting it
+// resolve npx from PATH avoids the unquoted-spaced-path failure.
+// (Native `type: http` config is NOT a valid claude_desktop_config.json form
+// as of 2026-06 — Claude Desktop rejects it with "not a valid MCP server
+// configuration and was skipped". The stdio bridge is required.)
 config.mcpServers["igs-legacy-search"] = {
-  command: "npx",
+  command: "cmd",
   args: [
+    "/c",
+    "npx",
     "-y",
     "mcp-remote",
     mcpUrl,
